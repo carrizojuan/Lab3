@@ -66,12 +66,11 @@ void loop(){
       timeClient.update();
       httpPOST("start",timeClient.getFormattedTime());
     }
-    
     delay(50);
     alfajores_caja ++; // lleva el conteo de alfajores en la caja actual
     alfajores_total ++; // lleva el conteo de alfajores totales
-    
-    if(alfajores_caja == 20){
+  }
+  if(alfajores_caja == 20){
         digitalWrite(5, HIGH);
         delay(5000);
         digitalWrite(5, LOW);
@@ -79,7 +78,7 @@ void loop(){
         httpPOST("finish",timeClient.getFormattedTime());
         relayStatus = 1;
         alfajores_caja = 0;
-    }
+   
   }
     
 }
