@@ -20,8 +20,14 @@ NTPClient timeClient(ntpUDP,"pool.ntp.org",utcOffset);
 
 //definimos wifiClient para conectarnos a una red
 WiFiClient wifiClient;
-const char* ssid = "FiberCorp WiFi887 2.4GHz";
-const char* password = "0041285223";
+const char* ssid = "wfrre";
+const char* password = "BityAtomo";
+
+const char ASK_FOR_LENGTH = "L";
+const char ASK_FOR_DATA = "D";
+
+char request = ' ';
+char requestIndex = 0;
 
 const int OFF = HIGH;
 int var = 0;
@@ -51,36 +57,37 @@ void setup()
   Serial.println("IP: ");
   Serial.println(WiFi.localIP());
   pinMode(5,OUTPUT);   //Relay
+  pinMode(16,OUTPUT);   //Led
   timeClient.begin();
 }
 
 
 void loop(){
-  delay(50);
   sensorValue = analogRead(A0); 
   if(sensorValue < 30){
     if (alfajores_caja == 0){
       cajas ++;
-      //alfajores_caja = cont;
-      //caja_actual["alfajores"] = cont;
       timeClient.update();
       httpPOST("start",timeClient.getFormattedTime());
     }
-    delay(50);
     alfajores_caja ++; // lleva el conteo de alfajores en la caja actual
     alfajores_total ++; // lleva el conteo de alfajores totales
+    Serial.println(alfajores_caja);
+    delay(100);
   }
   if(alfajores_caja == 20){
         digitalWrite(5, HIGH);
+        digitalWrite(16,HIGH);   //Led
+
         delay(5000);
         digitalWrite(5, LOW);
+        digitalWrite(16,LOW);   //Led
         timeClient.update();
         httpPOST("finish",timeClient.getFormattedTime());
         relayStatus = 1;
         alfajores_caja = 0;
    
-  }
-    
+  }    
 }
 
 void httpPOST(String timer, String date){
@@ -128,28 +135,44 @@ void parserMessage(String res){
 
 void requestEvent() {
  Serial.println("I2C Request received");
- StaticJsonDocument<300> doc;
- doc["controller_name"] = "NodeMCU-ESP32";
- timeClient.update();
- doc["date"] = timeClient.getFormattedTime();
 
- //array actuador
- JsonArray arrActuator = doc.createNestedArray("actuators");
- StaticJsonDocument<52> act;
- JsonObject actuator = act.to<JsonObject>();
- actuator["type"]= "relay";
- actuator["current_value"] = relayStatus;
- arrActuator.add(actuator);
+  if(request == ASK_FOR_LENGTH){
+    Wire.write(21);
+    char requestIndex = 0; 
+   }
 
- //array sensor
- JsonArray arrSensor = doc.createNestedArray("sensor");
- StaticJsonDocument<52> sen;
- JsonObject sensor = sen.to<JsonObject>();
- sensor["type"] = "hall";
- sensor["current_value"] = sensorValue;
- arrSensor.add(sensor);
+   if(request == ASK_FOR_DATA){
+     StaticJsonDocument<300> doc;
+     doc["controller_name"] = "NodeMCU-ESP32";
+     timeClient.update();
+     doc["date"] = timeClient.getFormattedTime();
+    
+     //array actuador
+     JsonArray arrActuator = doc.createNestedArray("actuators");
+     StaticJsonDocument<52> act;
+     JsonObject actuator = act.to<JsonObject>();
+     actuator["type"]= "relay";
+     actuator["current_value"] = relayStatus;
+     arrActuator.add(actuator);
+    
+     //array sensor
+     JsonArray arrSensor = doc.createNestedArray("sensor");
+     StaticJsonDocument<52> sen;
+     JsonObject sensor = sen.to<JsonObject>();
+     sensor["type"] = "hall";
+     sensor["current_value"] = sensorValue;
+     arrSensor.add(sensor);
+     serializeJsonPretty(doc,json);
 
- serializeJsonPretty(doc,json);
+     if(requestIndex < (21/32)){
+        Wire.write(json, 16);
+        requestIndex++;
+      }else{
+        Wire.write(json,16);
+        requestIndex = 0;        
+      }     
+   }
+ 
  Serial.print("Json:");
  Serial.print(json);
  
