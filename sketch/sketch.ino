@@ -92,7 +92,7 @@ void loop(){
 void httpPOST(String timer, String date){
   int contRepeat = 0;
   HTTPClient http;
-  char *url = "http://192.168.0.5:4200/post";
+  char *url = "http://192.168.0.8:4200/post";
   http.begin(wifiClient,url);
   http.addHeader("Content-Type","application/json");
   DynamicJsonDocument postMessage(2048);
