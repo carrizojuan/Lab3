@@ -7,10 +7,14 @@
 #include <ArduinoJson.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include <WiFiClient.h>
+#include <WiFiClient.h> 
+#include <ESP8266WebServer.h>
+
 
 #define SLAVE_ADDR 9
 #define ANSWERSIZE 5
+
+
 
 
 //definimos NTPClient para poder consultar el tiempo.
@@ -41,12 +45,22 @@ String start_caja;
 String Serializ;
 
 
+ESP8266WebServer server(80);
 
-
+void handleNotFound() 
+{
+   server.send(404, "text/plain", "Not found");
+}
+String readSensor() {
+  return String(sensorValue);
+}
+String readActuator() {
+  return String(relayStatus);
+}
 void setup()
 {   
-  Wire.begin(SLAVE_ADDR);
-  Wire.onRequest(requestEvent);
+  //Wire.begin(SLAVE_ADDR);
+  //Wire.onRequest(requestEvent);
   Serial.begin(9600);
   WiFi.begin(ssid,password);
   while(WiFi.status() != WL_CONNECTED){
@@ -56,13 +70,23 @@ void setup()
   Serial.println("Wifi Connected");
   Serial.println("IP: ");
   Serial.println(WiFi.localIP());
+  server.on("/sensor", []() {
+    server.send(200, "text/plain",readSensor().c_str());
+  });
+  server.on("/actuator", []() {
+    server.send(200, "text/plain",readActuator().c_str());
+  });
   pinMode(5,OUTPUT);   //Relay
   pinMode(16,OUTPUT); //Led
   timeClient.begin();
+  // Start server
+  server.begin();
+  Serial.println("HTTP server started");
 }
 
 
 void loop(){
+  server.handleClient();
   delay(10);
   sensorValue = analogRead(A0); 
   if(sensorValue < 30){
@@ -112,7 +136,7 @@ void httpPOST(String timer, String date){
   parserMessage(res);
   http.end();
 }
-void httpGET(){
+void httpGET(){ 
   HTTPClient http;
   char *url = "http://192.168.0.7:4200/";
   http.begin(wifiClient,url);
@@ -130,49 +154,7 @@ void parserMessage(String res){
   Serial.println(message);
 }
 
-
-
-void requestEvent() {
- Serial.println("I2C Request received");
-
-  if(request == ASK_FOR_LENGTH){
-    Wire.write(21);
-    char requestIndex = 0; 
-   }
-
-   if(request == ASK_FOR_DATA){
-     StaticJsonDocument<300> doc;
-     doc["controller_name"] = "NodeMCU-ESP32";
-     timeClient.update();
-     doc["date"] = timeClient.getFormattedTime();
-    
-     //array actuador
-     JsonArray arrActuator = doc.createNestedArray("actuators");
-     StaticJsonDocument<52> act;
-     JsonObject actuator = act.to<JsonObject>();
-     actuator["type"]= "relay";
-     actuator["current_value"] = relayStatus;
-     arrActuator.add(actuator);
-    
-     //array sensor
-     JsonArray arrSensor = doc.createNestedArray("sensor");
-     StaticJsonDocument<52> sen;
-     JsonObject sensor = sen.to<JsonObject>();
-     sensor["type"] = "hall";
-     sensor["current_value"] = sensorValue;
-     arrSensor.add(sensor);
-     serializeJsonPretty(doc,json);
-
-     if(requestIndex < (21/32)){
-        Wire.write(json, 16);
-        requestIndex++;
-      }else{
-        Wire.write(json,16);
-        requestIndex = 0;        
-      }     
-   }
  
- Serial.print("Json:");
- Serial.print(json);
+ //Serial.print("Json:");
+// Serial.print(json);
  
-}
