@@ -40,7 +40,7 @@ int alfajores_total = 0;
 int alfajores_caja = 0;
 int sensorValue;
 int relayStatus = 0;
-char json[21];
+char json[256];
 String start_caja;
 String Serializ;
 
@@ -51,11 +51,24 @@ void handleNotFound()
 {
    server.send(404, "text/plain", "Not found");
 }
-String readSensor() {
-  return String(sensorValue);
-}
-String readActuator() {
-  return String(relayStatus);
+
+String readStatus() {
+  StaticJsonDocument<256> doc;
+
+  doc["controller_name"] = "nodeMCU-ESP8266";
+  timeClient.update();
+  doc["date"] = timeClient.getFormattedTime();
+  
+  JsonObject actuators_0 = doc["actuators"].createNestedObject();
+  actuators_0["type"] = "rele";
+  actuators_0["current_value"] = relayStatus;
+  
+  JsonObject sensors_0 = doc["sensors"].createNestedObject();
+  sensors_0["type"] = "hall";
+  sensors_0["current_value"] = sensorValue;
+  
+  serializeJson(doc, json);
+  return json;
 }
 void setup()
 {   
@@ -70,11 +83,8 @@ void setup()
   Serial.println("Wifi Connected");
   Serial.println("IP: ");
   Serial.println(WiFi.localIP());
-  server.on("/sensor", []() {
-    server.send(200, "text/plain",readSensor().c_str());
-  });
-  server.on("/actuator", []() {
-    server.send(200, "text/plain",readActuator().c_str());
+  server.on("/recolect_data", []() {
+    server.send(200, "text/plain",readStatus().c_str());
   });
   pinMode(5,OUTPUT);   //Relay
   pinMode(16,OUTPUT); //Led
