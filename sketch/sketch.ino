@@ -24,8 +24,8 @@ NTPClient timeClient(ntpUDP,"pool.ntp.org",utcOffset);
 
 //definimos wifiClient para conectarnos a una red
 WiFiClient wifiClient;
-const char* ssid = "MOTOROLA-4F9E6";
-const char* password = "1:OjP*ab";
+const char* ssid = "Alejandro";
+const char* password = "12345678";
 
 const char ASK_FOR_LENGTH = 'L';
 const char ASK_FOR_DATA = 'D';
@@ -126,7 +126,7 @@ void loop(){
 void httpPOST(String timer, String date){
   int contRepeat = 0;
   HTTPClient http;
-  char *url = "http://192.168.0.8:4200/post";
+  char *url = "http://192.168.43.7:4200/post";
   http.begin(wifiClient,url);
   http.addHeader("Content-Type","application/json");
   DynamicJsonDocument postMessage(2048);
@@ -148,7 +148,7 @@ void httpPOST(String timer, String date){
 }
 void httpGET(){ 
   HTTPClient http;
-  char *url = "http://192.168.0.7:4200/";
+  char *url = "http://192.168.43.7:4200/";
   http.begin(wifiClient,url);
   int resCode = http.GET();
   Serial.println(resCode);
